@@ -63,7 +63,8 @@ export class ControlClient {
   }
 
   private async stopExtension(): Promise<VpnSnapshot> {
-    await vpnExtension.stopVpnExtensionAbility(VPN_WANT);
+    try { await vpnExtension.stopVpnExtensionAbility(VPN_WANT); }
+    catch (_) { throw new Error('系统未能断开 VPN，请在系统设置中核实后重试。'); }
     const snapshot = this.cached();
     snapshot.state = 'DISCONNECTED';
     snapshot.verified = true;
@@ -77,15 +78,20 @@ export class ControlClient {
 
   private async startExtension(): Promise<void> {
     let timer = -1;
+    let timedOut = false;
     try {
       await Promise.race([
         vpnExtension.startVpnExtensionAbility(VPN_WANT),
         new Promise<void>((_resolve: () => void, reject: (reason: Error) => void) => {
           timer = setTimeout(() => {
+            timedOut = true;
             reject(new Error('系统 VPN 授权或扩展启动未响应，请检查系统授权后重试。'));
           }, 60000);
         })
       ]);
+    } catch (_) {
+      throw new Error(timedOut ? '系统 VPN 授权或扩展启动未响应，请检查系统授权后重试。'
+        : '系统 VPN 扩展启动失败，请确认系统授权和设备解锁状态后重试。');
     } finally { clearTimeout(timer); }
   }
 

@@ -139,16 +139,18 @@ struct Index {
   private dialog?: CustomDialogController;
 
   aboutToAppear(): void {
-    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    this.store = new ProfileStore(context, this.getUIContext());
-    this.store.secure.pruneTransientSecrets().catch((reason: Error) => { this.error = reason.message; });
-    this.control = new ControlClient(context);
-    this.forms = new FormSync(context);
-    this.reloadProfiles();
-    this.snapshot = this.control.cached();
-    this.refresh();
-    this.startPolling();
-    this.onImportUri();
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      this.store = new ProfileStore(context, this.getUIContext());
+      this.store.secure.pruneTransientSecrets().catch((reason: Error) => { this.error = reason.message; });
+      this.control = new ControlClient(context);
+      this.forms = new FormSync(context);
+      this.reloadProfiles();
+      this.snapshot = this.control.cached();
+      this.refresh();
+      this.startPolling();
+      this.onImportUri();
+    } catch (reason) { this.error = (reason as Error).message || '应用存储初始化失败，请重新打开应用。'; }
   }
 
   aboutToDisappear(): void { clearInterval(this.timer); this.dialog?.close(); }
@@ -304,11 +306,13 @@ struct Index {
     if (this.snapshot.profileId === profile.id && (this.snapshot.state === 'CONNECTED' || isBusy(this.snapshot.state))) {
       this.error = '请先断开此配置的连接，再删除。'; return;
     }
-    const result = await this.getUIContext().getPromptAction().showDialog({ title: '删除配置',
-      message: `删除“${profile.name}”及其本机保存的认证信息？`,
-      buttons: [{ text: '取消', color: $r('app.color.text_secondary') }, { text: '删除', color: $r('app.color.error_text') }] });
-    if (result.index !== 1) return;
-    try { await this.store?.remove(profile.id); this.reloadProfiles(); await this.forms?.updateAll(this.snapshot); }
+    try {
+      const result = await this.getUIContext().getPromptAction().showDialog({ title: '删除配置',
+        message: `删除“${profile.name}”及其本机保存的认证信息？`,
+        buttons: [{ text: '取消', color: $r('app.color.text_secondary') }, { text: '删除', color: $r('app.color.error_text') }] });
+      if (result.index !== 1) return;
+      await this.store?.remove(profile.id); this.reloadProfiles(); await this.forms?.updateAll(this.snapshot);
+    }
     catch (reason) { this.error = (reason as Error).message; }
   }
 
@@ -320,23 +324,25 @@ struct Index {
 
   private about(): void {
     this.dialog = new CustomDialogController({ builder: AboutDialog({
-      onLicenses: () => { this.showLicenses().catch(() => {}); }
+      onLicenses: () => { this.showLicenses(); }
     }), customStyle: true });
     this.dialog.open();
   }
 
   private async showLicenses(): Promise<void> {
-    const prompt = this.getUIContext().getPromptAction();
-    const choice = await prompt.showActionMenu({ title: '开源组件许可', buttons: [
-      { text: 'OpenVPN 3 · MPL 2.0', color: $r('app.color.text_primary') },
-      { text: 'Mbed TLS · Apache 2.0 / GPL', color: $r('app.color.text_primary') },
-      { text: 'Asio · Boost 1.0', color: $r('app.color.text_primary') }
-    ] });
-    const filenames = ['OpenVPN-MPL-2.0.txt', 'MbedTLS-LICENSE.txt', 'Asio-LICENSE.txt'];
-    const manager = this.getUIContext().getHostContext()!.resourceManager;
-    const data = await manager.getRawFileContent(`licenses/${filenames[choice.index]}`);
-    await prompt.showDialog({ title: '开源许可', message: new util.TextDecoder().decodeToString(data),
-      buttons: [{ text: '关闭', color: $r('app.color.accent_text') }] });
+    try {
+      const prompt = this.getUIContext().getPromptAction();
+      const choice = await prompt.showActionMenu({ title: '开源组件许可', buttons: [
+        { text: 'OpenVPN 3 · MPL 2.0', color: $r('app.color.text_primary') },
+        { text: 'Mbed TLS · Apache 2.0 / GPL', color: $r('app.color.text_primary') },
+        { text: 'Asio · Boost 1.0', color: $r('app.color.text_primary') }
+      ] });
+      const filenames = ['OpenVPN-MPL-2.0.txt', 'MbedTLS-LICENSE.txt', 'Asio-LICENSE.txt'];
+      const manager = this.getUIContext().getHostContext()!.resourceManager;
+      const data = await manager.getRawFileContent(`licenses/${filenames[choice.index]}`);
+      await prompt.showDialog({ title: '开源许可', message: new util.TextDecoder().decodeToString(data),
+        buttons: [{ text: '关闭', color: $r('app.color.accent_text') }] });
+    } catch (_) { console.warn('License dialog was cancelled or unavailable; retaining the application page.'); }
   }
 
   @Builder
@@ -391,9 +397,9 @@ struct Index {
           Text('隧道内 IP 数据').fontSize(11).fontColor($r('app.color.text_secondary'))
         }.width('100%')
         Row({ space: 16 }) {
-          this.trafficColumn('下载', this.snapshot.downloadBytes, this.snapshot.downloadRate, this.snapshot.downloadPackets, true)
+          this.trafficColumn('下载', true)
           Divider().vertical(true).height(90).color($r('app.color.divider'))
-          this.trafficColumn('上传', this.snapshot.uploadBytes, this.snapshot.uploadRate, this.snapshot.uploadPackets, false)
+          this.trafficColumn('上传', false)
         }.width('100%')
         Text(this.snapshot.updatedAt > 0 ? `数据更新于 ${new Date(this.snapshot.updatedAt).toLocaleTimeString()}` : '连接后展示实际统计')
           .fontSize(11).fontColor($r('app.color.text_secondary')).width('100%')
@@ -404,17 +410,22 @@ struct Index {
   }
 
   @Builder
-  private trafficColumn(label: string, bytes: number, rate: number, packets: number, download: boolean) {
+  private trafficColumn(label: string, download: boolean) {
     Column({ space: 7 }) {
       Row({ space: 5 }) {
         Image(download ? $r('app.media.download') : $r('app.media.upload')).width(18).height(18)
         Text(label).fontSize(12).fontColor($r('app.color.text_secondary'))
       }
-      Text(this.snapshot.sessionId.length > 0 ? formatBytes(bytes) : '—').fontSize(21).fontWeight(FontWeight.Bold)
+      // Read state directly: primitive @Builder arguments retain their initial values.
+      Text(this.snapshot.sessionId.length > 0 ? formatBytes(download ? this.snapshot.downloadBytes : this.snapshot.uploadBytes) : '—')
+        .id(download ? 'downloadBytes' : 'uploadBytes').fontSize(21).fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.text_primary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-      Text(this.snapshot.verified && this.snapshot.state === 'CONNECTED' ? `${formatBytes(rate)}/s` : '— /s')
+      Text(this.snapshot.verified && this.snapshot.state === 'CONNECTED' ?
+        `${formatBytes(download ? this.snapshot.downloadRate : this.snapshot.uploadRate)}/s` : '— /s')
+        .id(download ? 'downloadRate' : 'uploadRate')
         .fontSize(13).fontColor($r('app.color.text_secondary'))
-      Text(this.snapshot.sessionId.length > 0 ? `${Math.floor(packets)} 包` : '— 包').fontSize(11).fontColor($r('app.color.text_secondary'))
+      Text(this.snapshot.sessionId.length > 0 ? `${Math.floor(download ? this.snapshot.downloadPackets : this.snapshot.uploadPackets)} 包` : '— 包')
+        .id(download ? 'downloadPackets' : 'uploadPackets').fontSize(11).fontColor($r('app.color.text_secondary'))
     }.alignItems(HorizontalAlign.Start).layoutWeight(1)
   }
 

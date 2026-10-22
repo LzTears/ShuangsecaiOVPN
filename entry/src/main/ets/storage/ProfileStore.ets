@@ -1,6 +1,7 @@
 import { common } from '@kit.AbilityKit';
 import { fileIo as fs, picker } from '@kit.CoreFileKit';
 import { util } from '@kit.ArkTS';
+import { BusinessError } from '@kit.BasicServicesKit';
 import ovpn from 'libovpn.so';
 import { CoreEvaluation, Credentials, Profile, ProfileIndex } from '../model/VpnModels';
 import { embedReference, inspectProfile } from '../model/ProfileParser';
@@ -35,8 +36,9 @@ export class ProfileStore {
   }
 
   private readUri(uri: string): string {
-    const file = fs.openSync(uri, fs.OpenMode.READ_ONLY);
+    let file: fs.File | undefined;
     try {
+      file = fs.openSync(uri, fs.OpenMode.READ_ONLY);
       const size = fs.statSync(file.fd).size;
       if (size <= 0 || size > 1024 * 1024) throw new Error('文件应为不超过 1 MiB 的文本。');
       const buffer = new ArrayBuffer(size);
@@ -50,7 +52,15 @@ export class ProfileStore {
       }
       if (offset !== size) throw new Error('文件未完整读取，请重新选择。');
       return new util.TextDecoder('utf-8', { fatal: true }).decodeToString(new Uint8Array(buffer));
-    } finally { fs.closeSync(file); }
+    } catch (error) {
+      if ((error as BusinessError).code !== undefined) throw new Error('读取所选文件失败，请重新选择有效文件。');
+      throw new Error((error as Error).message || '读取所选文件失败，请重新选择。');
+    } finally {
+      if (file !== undefined) {
+        try { fs.closeSync(file); }
+        catch (_) { throw new Error('关闭所选文件失败，请重新选择文件后重试。'); }
+      }
+    }
   }
 
   async importUri(uri: string): Promise<Profile> {
@@ -59,11 +69,13 @@ export class ProfileStore {
     for (let i = inspected.references.length - 1; i >= 0; i--) {
       const reference = inspected.references[i];
       if (this.uiContext === undefined) throw new Error('请在应用内选择配置引用的关联文件。');
-      await this.uiContext.getPromptAction().showDialog({
-        title: '选择关联证书或密钥',
-        message: `配置引用 ${reference.directive} 文件：${reference.path}。请在接下来的文件选择器中选择对应文件。`,
-        buttons: [{ text: '选择文件', color: '#C65E00' }]
-      });
+      try {
+        await this.uiContext.getPromptAction().showDialog({
+          title: '选择关联证书或密钥',
+          message: `配置引用 ${reference.directive} 文件：${reference.path}。请在接下来的文件选择器中选择对应文件。`,
+          buttons: [{ text: '选择文件', color: '#C65E00' }]
+        });
+      } catch (_) { throw new Error('未能确认关联文件，本次配置未保存，请重试。'); }
       const options = new picker.DocumentSelectOptions();
       options.maxSelectNumber = 1;
       const files = await new picker.DocumentViewPicker(this.context).select(options);

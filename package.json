@@ -1,5 +1,5 @@
 {
   "name": "shuangsecai-ovpn-checks",
   "private": true,
-  "scripts": { "test": "node --test scripts/test-models.cjs scripts/test-control-stop.cjs" }
+  "scripts": { "test": "node --test scripts/test-models.cjs scripts/test-control-stop.cjs scripts/test-traffic-refresh.cjs scripts/test-sdk-errors.cjs" }
 }

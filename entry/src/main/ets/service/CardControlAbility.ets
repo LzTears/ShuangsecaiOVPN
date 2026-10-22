@@ -6,7 +6,10 @@ import { ProfileStore } from '../storage/ProfileStore';
 import { VpnSnapshot, emptySnapshot, isBusy } from '../model/VpnModels';
 
 class Acknowledgement implements rpc.Parcelable {
-  marshalling(sequence: rpc.MessageSequence): boolean { sequence.writeString('accepted'); return true; }
+  marshalling(sequence: rpc.MessageSequence): boolean {
+    try { sequence.writeString('accepted'); return true; }
+    catch (_) { console.warn('Card acknowledgement serialization failed.'); return false; }
+  }
   unmarshalling(_sequence: rpc.MessageSequence): boolean { return true; }
 }
 
@@ -14,22 +17,28 @@ class Acknowledgement implements rpc.Parcelable {
 // It has no window and sends intents to the VPN extension through the private mailbox.
 export default class CardControlAbility extends UIAbility {
   onCreate(): void {
-    this.callee.on('vpnConnect', (_data: rpc.MessageSequence) => {
-      this.handle('connect'); return new Acknowledgement();
-    });
-    this.callee.on('vpnDisconnect', (_data: rpc.MessageSequence) => {
-      this.handle('disconnect'); return new Acknowledgement();
-    });
-    this.callee.on('vpnRefresh', (_data: rpc.MessageSequence) => {
-      this.handle('query'); return new Acknowledgement();
-    });
+    try {
+      this.callee.on('vpnConnect', (_data: rpc.MessageSequence) => {
+        this.handle('connect'); return new Acknowledgement();
+      });
+      this.callee.on('vpnDisconnect', (_data: rpc.MessageSequence) => {
+        this.handle('disconnect'); return new Acknowledgement();
+      });
+      this.callee.on('vpnRefresh', (_data: rpc.MessageSequence) => {
+        this.handle('query'); return new Acknowledgement();
+      });
+    } catch (_) {
+      console.error('Card control registration failed.');
+      this.onDestroy();
+    }
   }
 
   private async handle(action: string): Promise<void> {
-    const control = new ControlClient(this.context);
-    const forms = new FormSync(this.context);
+    let forms: FormSync | undefined;
     let snapshot: VpnSnapshot = emptySnapshot();
     try {
+      const control = new ControlClient(this.context);
+      forms = new FormSync(this.context);
       snapshot = await control.query();
       if (action === 'connect') {
         if (snapshot.verified && (snapshot.state === 'CONNECTED' || isBusy(snapshot.state))) {
@@ -54,12 +63,17 @@ export default class CardControlAbility extends UIAbility {
     } catch (error) {
       snapshot.error = (error as Error).message;
     }
-    await forms.updateAll(snapshot);
+    await forms?.updateAll(snapshot);
+  }
+
+  private removeCallback(method: string): void {
+    try { this.callee.off(method); }
+    catch (_) { console.warn('Card control callback removal failed.'); }
   }
 
   onDestroy(): void {
-    this.callee.off('vpnConnect');
-    this.callee.off('vpnDisconnect');
-    this.callee.off('vpnRefresh');
+    this.removeCallback('vpnConnect');
+    this.removeCallback('vpnDisconnect');
+    this.removeCallback('vpnRefresh');
   }
 }

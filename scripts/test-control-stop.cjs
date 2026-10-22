@@ -32,7 +32,11 @@ function setup(states, rejectStop = false, options = {}) {
     '@kit.AbilityKit': {},
     '@kit.BasicServicesKit': { commonEventManager: { publish: () => {} },
       systemDateTime: { TimeType: { STARTUP: 0 }, getUptime: () => uptime } },
-    '@kit.NetworkKit': { vpnExtension: { stopVpnExtensionAbility: async (want) => {
+    '@kit.NetworkKit': { vpnExtension: { startVpnExtensionAbility: () => {
+      if (options.startFailure === 'sync') throw new Error('mock SDK detail');
+      if (options.startFailure === 'async') return Promise.reject(new Error('mock SDK detail'));
+      return options.startTimeout ? new Promise(() => {}) : Promise.resolve();
+    }, stopVpnExtensionAbility: async (want) => {
       stops.push({ bundleName: want.bundleName, abilityName: want.abilityName, at: uptime });
       if (rejectStop) throw new Error('system stop rejected');
     } } },
@@ -47,7 +51,10 @@ function setup(states, rejectStop = false, options = {}) {
   const result = { exports: {} };
   vm.runInNewContext(compiled, { module: result, exports: result.exports, require: (id) => {
     assert.ok(id in modules, `unexpected dependency: ${id}`); return modules[id];
-  }, setTimeout: (callback, ms) => { uptime += ms; callback(); return 0; }, clearTimeout: () => {} }, { filename });
+  }, setTimeout: (callback, ms) => {
+    if (ms < 60000 || options.startTimeout) { uptime += ms; callback(); }
+    return 0;
+  }, clearTimeout: () => {} }, { filename });
   const client = new result.exports.ControlClient({});
   const send = client.send.bind(client);
   let replyIndex = 0;
@@ -85,8 +92,20 @@ test('returns immediately when the extension confirms it is already disconnected
 
 test('does not publish a disconnected state if the system stop fails', async () => {
   const { client, stored } = setup(['DISCONNECTING'], true);
-  await assert.rejects(client.disconnect(), /system stop rejected/);
+  await assert.rejects(client.disconnect(), /系统未能断开 VPN/);
   assert.equal(JSON.parse(stored.get('snapshot.json')).state, 'DISCONNECTING');
+});
+
+for (const failure of ['sync', 'async']) {
+  test(`reports ${failure} extension startup failure without exposing SDK details`, async () => {
+    const { client } = setup([], false, { startFailure: failure });
+    await assert.rejects(client.startExtension(), /系统 VPN 扩展启动失败/);
+  });
+}
+
+test('keeps the authorization timeout distinct from an immediate startup failure', async () => {
+  const { client } = setup([], false, { startTimeout: true });
+  await assert.rejects(client.startExtension(), /系统 VPN 授权或扩展启动未响应/);
 });
 
 const credentials = { username: 'test-user', password: 'test-only', keyPassword: '' };

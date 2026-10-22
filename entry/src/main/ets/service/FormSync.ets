@@ -67,13 +67,16 @@ export class FormSync {
   }
 
   async update(snapshot: VpnSnapshot, id: string): Promise<void> {
-    await formProvider.updateForm(id, formBindingData.createFormBindingData(this.data(snapshot, id)));
+    try { await formProvider.updateForm(id, formBindingData.createFormBindingData(this.data(snapshot, id))); }
+    catch (_) { throw new Error('卡片数据更新失败，请稍后刷新。'); }
   }
 
   async updateAll(snapshot: VpnSnapshot): Promise<void> {
-    for (const id of this.ids()) {
-      try { await this.update(snapshot, id); }
-      catch (_) { /* Host may be temporarily unavailable; retain the prior visible timestamp. */ }
-    }
+    try {
+      for (const id of this.ids()) {
+        try { await this.update(snapshot, id); }
+        catch (_) { /* Host may be temporarily unavailable; retain the prior visible timestamp. */ }
+      }
+    } catch (_) { console.warn('Card index is unavailable; retaining the previous card data.'); }
   }
 }

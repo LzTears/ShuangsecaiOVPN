@@ -20,6 +20,7 @@ export default class OvpnAbility extends VpnExtensionAbility {
   private current: VpnSnapshot = emptySnapshot();
   private traffic: Traffic = new Traffic();
   private timer: number = -1;
+  private lastCardUpdate: number = 0;
   private startMonotonic: number = 0;
   private draining: boolean = false;
   private shuttingDown: boolean = false;
@@ -49,7 +50,9 @@ export default class OvpnAbility extends VpnExtensionAbility {
         this.drain();
       }).catch(() => { this.drain(); });
     this.timer = setInterval(() => {
-      this.sample();
+      this.sample(true);
+      if (this.current.state === 'CONNECTED'
+        && systemDateTime.getUptime(systemDateTime.TimeType.STARTUP) - this.lastCardUpdate >= 60000) this.publish(true);
       this.drain();
     }, 1000);
   }
@@ -58,8 +61,12 @@ export default class OvpnAbility extends VpnExtensionAbility {
     if (this.shuttingDown) return;
     this.current.updatedAt = Date.now();
     this.current.verified = true;
-    this.files?.write('snapshot.json', JSON.stringify(this.current));
-    if (updateCards) this.forms?.updateAll(this.current);
+    try { this.files?.write('snapshot.json', JSON.stringify(this.current)); }
+    catch (_) { console.warn('VPN snapshot cache could not be saved.'); }
+    if (updateCards) {
+      this.lastCardUpdate = systemDateTime.getUptime(systemDateTime.TimeType.STARTUP);
+      this.forms?.updateAll(this.current);
+    }
   }
 
   private sample(persist: boolean = false): void {
@@ -74,7 +81,7 @@ export default class OvpnAbility extends VpnExtensionAbility {
     if (native.running) this.current.state = this.current.state === 'DISCONNECTING' ? 'DISCONNECTING' : native.state;
     this.current.updatedAt = Date.now();
     this.current.verified = true;
-    if (persist) this.files?.write('snapshot.json', JSON.stringify(this.current));
+    if (persist) this.publish(false);
   }
 
   private async drain(): Promise<void> {
@@ -103,7 +110,8 @@ export default class OvpnAbility extends VpnExtensionAbility {
           if (command.action === 'connect') await this.connect(command);
           else if (command.action === 'disconnect') this.disconnect();
           else if (command.action !== 'query') throw new Error('未知 VPN 操作。');
-          this.sample(true);
+          // Queries read the last periodic sample without resetting its rate interval.
+          if (command.action !== 'query') this.sample(true);
         } catch (reason) { error = (reason as Error).message; }
         const reply: ControlReply = { id: command.id, error, snapshot: this.current };
         this.files.write(`replies/${command.id}.json`, JSON.stringify(reply));
@@ -115,7 +123,8 @@ export default class OvpnAbility extends VpnExtensionAbility {
         const reply = JSON.parse(this.files.read(`replies/${name}`)) as ControlReply;
         if (Date.now() - reply.snapshot.updatedAt > 60000) this.files.remove(`replies/${name}`);
       }
-    } finally { this.draining = false; }
+    } catch (_) { console.warn('VPN command processing failed; awaiting the next request.'); }
+    finally { this.draining = false; }
   }
 
   private async connect(command: ControlCommand): Promise<void> {
@@ -172,7 +181,8 @@ export default class OvpnAbility extends VpnExtensionAbility {
 
   private async destroyTun(): Promise<void> {
     if (this.tunExists) {
-      await this.vpn?.destroy();
+      try { await this.vpn?.destroy(); }
+      catch (_) { throw new Error('系统 VPN 资源释放失败，请在系统设置中核实连接状态。'); }
       this.tunExists = false;
     }
   }
@@ -253,13 +263,14 @@ export default class OvpnAbility extends VpnExtensionAbility {
     clearInterval(this.timer);
     ovpn.stop();
     if (this.subscriber !== undefined) commonEventManager.unsubscribe(this.subscriber, () => {});
-    await this.destroyTun();
-    this.current.state = 'DISCONNECTED';
+    try { await this.destroyTun(); this.current.state = 'DISCONNECTED'; }
+    catch (error) { this.current.state = 'FAILED'; this.current.error = (error as Error).message; }
     this.current.downloadRate = 0;
     this.current.uploadRate = 0;
     this.current.verified = false;
     this.current.updatedAt = Date.now();
-    this.files?.write('snapshot.json', JSON.stringify(this.current));
+    try { this.files?.write('snapshot.json', JSON.stringify(this.current)); }
+    catch (_) { console.warn('Final VPN snapshot cache could not be saved.'); }
     await this.forms?.updateAll(this.current);
   }
 }

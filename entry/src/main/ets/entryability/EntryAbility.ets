@@ -5,7 +5,8 @@ export default class EntryAbility extends UIAbility {
   private mainWindow?: window.Window;
 
   onCreate(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
-    this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
+    try { this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET); }
+    catch (_) { console.warn('Automatic theme initialization failed; retaining the system theme.'); }
     this.acceptFile(want);
   }
 
@@ -28,12 +29,16 @@ export default class EntryAbility extends UIAbility {
   onConfigurationUpdate(_configuration: Configuration): void { this.updateWindowColors(); }
 
   private updateWindowColors(): void {
-    const resources = this.context.resourceManager;
-    const background = `#${(resources.getColorSync($r('app.color.page_background').id) >>> 0).toString(16).padStart(8, '0')}`;
-    const foreground = `#${(resources.getColorSync($r('app.color.text_primary').id) >>> 0).toString(16).padStart(8, '0')}`;
-    this.mainWindow?.setWindowBackgroundColor(background);
-    this.mainWindow?.setWindowSystemBarProperties({ statusBarColor: background, navigationBarColor: background,
-      statusBarContentColor: foreground, navigationBarContentColor: foreground }).catch(() => {});
+    if (this.mainWindow === undefined) return;
+    try {
+      const resources = this.context.resourceManager;
+      const background = `#${(resources.getColorSync($r('app.color.page_background').id) >>> 0).toString(16).padStart(8, '0')}`;
+      const foreground = `#${(resources.getColorSync($r('app.color.text_primary').id) >>> 0).toString(16).padStart(8, '0')}`;
+      // The full-size ArkUI root and launch window already use page_background.
+      this.mainWindow.setWindowSystemBarProperties({ statusBarColor: background, navigationBarColor: background,
+        statusBarContentColor: foreground, navigationBarContentColor: foreground })
+        .catch(() => { console.warn('System bar theme update failed.'); });
+    } catch (_) { console.warn('Window theme resources are unavailable.'); }
   }
   onForeground(): void { AppStorage.setOrCreate('appForeground', true); }
   onBackground(): void { AppStorage.setOrCreate('appForeground', false); }
