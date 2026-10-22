@@ -6,6 +6,12 @@
 
 📱 基于 HarmonyOS API 26，使用 ArkTS、ArkUI 与 C++，支持 `arm64-v8a` 手机和 `x86_64` 模拟器。已完成真机连接、断开和重连验证，完整网络与稳定性验收仍在进行。
 
+## 📦 下载与签名
+
+在 [GitHub Releases](https://github.com/LzTears/ShuangsecaiOVPN/releases) 下载未签名 `.hap` 和 `SHA256SUMS.txt`。安装前由下载者使用自己的证书与匹配设备的 Profile 完成签名，仓库不提供通用签名包。当前为开发验证版，要求 HarmonyOS API 26。
+
+Release 同时提供对应的第三方源码及许可声明；应用源码可从对应标签下载。
+
 ## ✨ 功能特色
 
 - 🔌 **连接控制**：一键连接与断开，支持认证弹窗；切换配置时先停止旧会话。
@@ -18,12 +24,6 @@
 - 🔄 **跨进程同步**：应用、VPN 扩展和卡片通过私有沙箱命令与应答协作，公共事件仅用于唤醒。
 
 可复现检查与尚未完成的验收见 [验证状态](docs/VALIDATION.md)。核心已编译、界面可运行，并不表示实际隧道已建立。
-
-## 📦 下载与签名
-
-在 [GitHub Releases](https://github.com/LzTears/ShuangsecaiOVPN/releases) 下载未签名 `.hap` 和 `SHA256SUMS.txt`。安装前由下载者使用自己的证书与匹配设备的 Profile 完成签名，仓库不提供通用签名包。当前为开发验证版，要求 HarmonyOS API 26。
-
-Release 同时提供对应的第三方源码及许可声明；应用源码可从对应标签下载。
 
 ## 🛠️ 构建
 
