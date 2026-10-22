@@ -1,0 +1,21 @@
+{
+  "forms": [
+    {
+      "name": "OvpnCard",
+      "displayName": "$string:form_name",
+      "description": "$string:form_description",
+      "src": "./ets/form/pages/OvpnCard.ets",
+      "uiSyntax": "arkts",
+      "window": { "designWidth": 720, "autoDesignWidth": true },
+      "colorMode": "auto",
+      "isDefault": true,
+      "isDynamic": true,
+      "defaultDimension": "2*2",
+      "supportDimensions": ["2*2", "2*4"],
+      "resizable": true,
+      "updateEnabled": true,
+      "updateDuration": 1,
+      "formConfigAbility": "ability://EntryAbility"
+    }
+  ]
+}

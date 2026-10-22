@@ -1,0 +1,17 @@
+diff --git a/openvpn/mbedtls/ssl/sslctx.hpp b/openvpn/mbedtls/ssl/sslctx.hpp
+--- a/openvpn/mbedtls/ssl/sslctx.hpp
++++ b/openvpn/mbedtls/ssl/sslctx.hpp
+@@ -958,6 +958,13 @@
+                     if (mbedtls_ssl_set_hostname(ssl, hostname))
+                         throw MbedTLSException("mbedtls_ssl_set_hostname failed");
+                 }
++                else if (!c.mode.is_server())
++                {
++                    // OpenVPN validates CA, EKU and verify-x509-name in its callback.
++                    // Mbed TLS 3.6.3+ requires an explicit hostname policy.
++                    if (mbedtls_ssl_set_hostname(ssl, nullptr))
++                        throw MbedTLSException("mbedtls_ssl_set_hostname failed");
++                }
+ 
+                 // client cert+key
+                 if (c.local_cert_enabled)

@@ -1,0 +1,66 @@
+{
+  "module": {
+    "name": "entry",
+    "type": "entry",
+    "description": "$string:app_description",
+    "mainElement": "EntryAbility",
+    "deviceTypes": ["phone"],
+    "deliveryWithInstall": true,
+    "installationFree": false,
+    "pages": "$profile:main_pages",
+    "requestPermissions": [
+      { "name": "ohos.permission.INTERNET" },
+      { "name": "ohos.permission.GET_NETWORK_INFO" },
+      { "name": "ohos.permission.KEEP_BACKGROUND_RUNNING" }
+    ],
+    "abilities": [
+      {
+        "name": "EntryAbility",
+        "srcEntry": "./ets/entryability/EntryAbility.ets",
+        "description": "$string:app_description",
+        "icon": "$media:layered_image",
+        "label": "$string:app_label",
+        "startWindowIcon": "$media:power",
+        "startWindowBackground": "$color:start_window_background",
+        "launchType": "singleton",
+        "exported": true,
+        "skills": [
+          { "entities": ["entity.system.home"], "actions": ["ohos.want.action.home"] },
+          {
+            "actions": ["ohos.want.action.viewData"],
+            "entities": ["entity.system.browsable"],
+            "uris": [{ "scheme": "file", "type": "com.shuangsecai.ovpn.profile", "linkFeature": "FileOpen" }]
+          }
+        ]
+      },
+      {
+        "name": "CardControlAbility",
+        "srcEntry": "./ets/service/CardControlAbility.ets",
+        "description": "$string:form_description",
+        "startWindowIcon": "$media:power",
+        "startWindowBackground": "$color:start_window_background",
+        "launchType": "singleton",
+        "exported": false
+      }
+    ],
+    "extensionAbilities": [
+      {
+        "name": "OvpnAbility",
+        "srcEntry": "./ets/vpn/OvpnAbility.ets",
+        "type": "vpn",
+        "exported": false,
+        "label": "$string:app_label",
+        "description": "$string:app_description"
+      },
+      {
+        "name": "OvpnFormAbility",
+        "srcEntry": "./ets/form/OvpnFormAbility.ets",
+        "type": "form",
+        "exported": false,
+        "label": "$string:app_label",
+        "description": "$string:form_description",
+        "metadata": [{ "name": "ohos.extension.form", "resource": "$profile:form_config" }]
+      }
+    ]
+  }
+}

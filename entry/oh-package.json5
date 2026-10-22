@@ -1,0 +1,10 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "鸿蒙原生openVPN,支持卡片快速开关查询",
+  "main": "",
+  "author": "",
+  "license": "",
+  "dependencies": { "libovpn.so": "file:./src/main/cpp/types/libovpn" }
+}
+

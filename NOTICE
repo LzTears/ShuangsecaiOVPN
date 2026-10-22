@@ -1,0 +1,8 @@
+ShuangsecaiOVPN (双色彩OVPN)
+Copyright 2026 ShuangsecaiOVPN contributors
+
+Original project code is licensed under the Apache License, Version 2.0.
+Existing source copyright notices remain in force.
+
+Third-party components and the OpenVPN 3 patch retain their respective licenses.
+See THIRD_PARTY_NOTICES.md and entry/src/main/resources/rawfile/licenses/.

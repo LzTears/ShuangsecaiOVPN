@@ -1,0 +1,21 @@
+{
+  "openvpn3": {
+    "url": "https://github.com/OpenVPN/openvpn3.git",
+    "tag": "release/3.11.8",
+    "commit": "4f3bdef73245d4ee9e8216c5d65baccc9568f6ef",
+    "licenseChoice": "MPL-2.0"
+  },
+  "mbedtls": {
+    "url": "https://github.com/Mbed-TLS/mbedtls.git",
+    "tag": "mbedtls-3.6.7",
+    "commit": "068ff080b369adfac81509f9b57b2afabaf82dc5",
+    "frameworkCommit": "dde0c4a0e448a0552f18817dcea633bb851fd288",
+    "license": "Apache-2.0 OR GPL-2.0-or-later"
+  },
+  "asio": {
+    "url": "https://github.com/chriskohlhoff/asio.git",
+    "tag": "asio-1-30-2",
+    "commit": "12e0ce9e0500bf0f247dbd1ae894272656456079",
+    "license": "BSL-1.0"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "string": [
+    { "name": "app_label", "value": "双色彩OVPN" },
+    { "name": "app_description", "value": "鸿蒙原生openVPN,支持卡片快速开关查询" },
+    { "name": "form_name", "value": "VPN 快速开关" },
+    { "name": "form_description", "value": "连接或断开默认 VPN，查询本次累计上传与下载流量。" }
+  ]
+}
