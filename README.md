@@ -19,6 +19,12 @@
 
 可复现检查与尚未完成的验收见 [验证状态](docs/VALIDATION.md)。核心已编译、界面可运行，并不表示实际隧道已建立。
 
+## 📦 下载与签名
+
+在 [GitHub Releases](https://github.com/LzTears/ShuangsecaiOVPN/releases) 下载未签名 `.hap` 和 `SHA256SUMS.txt`。安装前由下载者使用自己的证书与匹配设备的 Profile 完成签名，仓库不提供通用签名包。当前为开发验证版，要求 HarmonyOS API 26。
+
+Release 同时提供对应的第三方源码及许可声明；应用源码可从对应标签下载。
+
 ## 🛠️ 构建
 
 需要 DevEco Studio、HarmonyOS API 26 SDK / Native 工具链、Git、Node.js（支持 `node --test`）、PowerShell 和 DevEco CLI。第三方依赖固定版本，初始化脚本会下载并校验对应 commit：
