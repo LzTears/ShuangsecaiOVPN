@@ -29,6 +29,7 @@
 !/docs/VALIDATION.md
 /docs/*.json
 /docs/screenshots/
+/docs/appgallery-*.png
 *.ovpn
 *.key
 *.p12

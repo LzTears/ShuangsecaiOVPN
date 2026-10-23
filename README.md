@@ -25,6 +25,16 @@ Release 同时提供对应的第三方源码及许可声明；应用源码可从
 
 可复现检查与尚未完成的验收见 [验证状态](docs/VALIDATION.md)。核心已编译、界面可运行，并不表示实际隧道已建立。
 
+## 🖼️ 界面预览
+
+未导入配置时的连接页与桌面卡片，支持系统浅色和深色外观。桌面卡片提供 2×2 和横向 4×2 两种尺寸。
+
+| 浅色连接页 | 深色连接页 |
+| :---: | :---: |
+| <img src="docs/images/app-light.png" alt="浅色主题连接页" width="280"> | <img src="docs/images/app-dark.png" alt="深色主题连接页" width="280"> |
+| 浅色桌面卡片 | 深色桌面卡片 |
+| <img src="docs/images/cards-light.png" alt="浅色主题的两种尺寸桌面卡片" width="280"> | <img src="docs/images/cards-dark.png" alt="深色主题的两种尺寸桌面卡片" width="280"> |
+
 ## 🛠️ 构建
 
 需要 DevEco Studio、HarmonyOS API 26 SDK / Native 工具链、Git、Node.js（支持 `node --test`）、PowerShell 和 DevEco CLI。第三方依赖固定版本，初始化脚本会下载并校验对应 commit：
